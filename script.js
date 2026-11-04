@@ -3551,6 +3551,13 @@ async function syncFromCloud() {
       }
       
       localStorage.setItem('budgetSettings', JSON.stringify(mergedSettings));
+
+      // NEW: Bridge the gap between cloud settings and local debt memory
+      if (data.settings.debtExtraPayment !== undefined) {
+        const localDebtSettings = JSON.parse(localStorage.getItem('debtSettings')) || { strategy: 'avalanche', extra: 0 };
+        localDebtSettings.extra = data.settings.debtExtraPayment;
+        localStorage.setItem('debtSettings', JSON.stringify(localDebtSettings));
+      }
     }
     
     window.location.reload(); 
