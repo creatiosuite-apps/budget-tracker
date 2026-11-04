@@ -3572,10 +3572,10 @@ async function pushSettingsToCloud() {
     userSettings.debtExtraPayment = parseFloat(extraDebtInput.value) || 0;
   }
 
-  // Clone settings and remove the name so it stays local-only
-  const cloudSettings = { ...userSettings };
+  // Use JSON parse/stringify for a true deep clone, breaking the reference
+  const cloudSettings = JSON.parse(JSON.stringify(userSettings));
   delete cloudSettings.name;
-  delete cloudSettings.budgets;
+  delete cloudSettings.budgets; // This will now fully remove the budgets from the payload
 
   try {
     await fetch(scriptUrl, {
