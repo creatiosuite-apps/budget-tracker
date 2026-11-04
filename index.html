@@ -175,9 +175,12 @@
   <div id="app-wrapper" style="display: flex; flex-direction: column; height: 100vh; width: 100vw; overflow: hidden;">
     
     <!-- NEW: Global Branding Header (Now properly isolated) -->
-    <div style="width: 100%; text-align: center; padding: 12px 0; background: var(--card-bg); border-bottom: 1px solid var(--border-color); z-index: 1000; display: flex; justify-content: center; align-items: center; gap: 8px; flex-shrink: 0;">
+    <div style="width: 100%; text-align: center; padding: 12px 0; background: var(--card-bg); border-bottom: 1px solid var(--border-color); z-index: 1000; display: flex; justify-content: center; align-items: center; gap: 8px; flex-shrink: 0; position: relative;">
       <i class="fa-solid fa-wallet" style="color: var(--accent-color); font-size: 16px;"></i>
       <span style="font-weight: 700; font-size: 14px; color: var(--text-main); letter-spacing: 0.5px;">Budget Tracker <span style="font-weight: 400; color: var(--text-muted);">by CreatioSuite</span></span>
+      <button onclick="syncFromCloud()" id="cloud-sync-btn" style="position: absolute; right: 16px; background: transparent; border: none; color: var(--accent-color); font-size: 16px; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Sync from Cloud">
+        <i class="fa-solid fa-cloud-arrow-down"></i>
+      </button>
     </div>
 
     <div id="app-container" style="flex: 1; position: relative;">
@@ -506,7 +509,7 @@
               <label style="font-size: 12px; color: var(--text-muted); font-weight: bold; margin-bottom: 8px; display: block;" data-i18n="extraMonthly">EXTRA MONTHLY PAYMENT</label>
               <div class="currency-input" style="display: flex; align-items: center; border: 1px solid var(--border-color); border-radius: 12px; padding: 0 12px;">
                 <span style="color: var(--text-muted); font-weight: bold;">$</span>
-                <input type="number" id="debt-extra-payment" value="0" onkeyup="renderDebtPage()" onchange="renderDebtPage()" style="border: none; background: transparent; padding: 12px; width: 100%; outline: none; color: var(--text-main); font-weight: bold;">
+                <input type="number" id="debt-extra-payment" value="0" onkeyup="renderDebtPage()" onchange="renderDebtPage(); pushSettingsToCloud();" style="border: none; background: transparent; padding: 12px; width: 100%; outline: none; color: var(--text-main); font-weight: bold;">
               </div>
               <div style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
                 <i class="fa-solid fa-circle-info"></i> This amount is projected onto your #1 Priority Target.

@@ -1336,6 +1336,8 @@ function saveCustomAccount() {
   document.getElementById('acc-name').value = '';
   document.getElementById('account-modal').style.display = 'none';
   initSettings(); 
+
+  pushSettingsToCloud();
 }
 
 function deleteAccount(accName) {
@@ -1346,20 +1348,25 @@ function deleteAccount(accName) {
   initSettings();
 }
 
-function saveAllSettings() {
+async function saveAllSettings() {
   userSettings.name = document.getElementById('set-name').value;
   userSettings.url = document.getElementById('set-url').value;
   userSettings.currency = document.getElementById('set-currency').value;
   userSettings.dateFormat = document.getElementById('set-date-format').value;
   userSettings.language = document.getElementById('set-language').value;
-  
+
+  // Save to local memory first
   localStorage.setItem('budgetSettings', JSON.stringify(userSettings));
+  
+  // Change the button text so the user knows it is loading
+  const saveBtn = document.querySelector('button[onclick="saveAllSettings()"]');
+  if (saveBtn) saveBtn.innerText = "Syncing to Cloud...";
 
-  // NEW: Set dynamic greeting
-  updateGreeting();
-
-  alert('Settings saved!');
-  location.reload();
+  // WAIT for the cloud push to finish before reloading the page!
+  await pushSettingsToCloud();
+  
+  // Now it is safe to reload
+  window.location.reload();
 }
 
 function populateCategoryDropdowns() {
@@ -1414,6 +1421,8 @@ function saveCustomCategory() {
   
   document.getElementById('category-modal').style.display = 'none';
   initSettings(); 
+
+  pushSettingsToCloud();
 }
 
 function renderSettingsCategories() {
@@ -3504,4 +3513,77 @@ function exportLocalData() {
   // 6. Cleanup
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+// --- MANUAL CLOUD SYNC ---
+async function syncFromCloud() {
+  const scriptUrl = document.getElementById('set-url').value;
+  if (!scriptUrl) {
+    alert("Please set your Google Web App URL in the Settings tab first.");
+    return;
+  }
+  
+  const btn = document.getElementById('cloud-sync-btn');
+  if (btn) btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+  
+  try {
+    // FORCE FRESH DATA: Attach a timestamp so the browser never caches the request
+    const cacheBusterUrl = scriptUrl + (scriptUrl.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
+    
+    // Add 'cache: no-store' for extra browser override protection
+    const response = await fetch(cacheBusterUrl, { cache: 'no-store' });
+    const data = await response.json();
+    
+    // Overwrite local memory with fresh cloud data
+    if (data.transactions && data.transactions.length > 0) {
+      localStorage.setItem('budget_app_transactions', JSON.stringify(data.transactions));
+    }
+    
+    if (data.budgets && data.budgets.length > 0) {
+      localStorage.setItem('budget_app_budgets', JSON.stringify(data.budgets));
+    }
+    
+    // Overwrite local settings with fresh cloud settings, but protect the local name
+    if (data.settings) {
+      const localMemory = JSON.parse(localStorage.getItem('budgetSettings')) || {};
+      const protectedName = localMemory.name || ''; 
+      
+      const mergedSettings = { ...data.settings, name: protectedName };
+      localStorage.setItem('budgetSettings', JSON.stringify(mergedSettings));
+    }
+    
+    window.location.reload(); 
+  } catch (error) {
+    console.error(error);
+    alert("Sync failed. Check your internet connection or URL.");
+  } finally {
+    if (btn) btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down"></i>';
+  }
+}
+
+// --- SYNC SETTINGS TO CLOUD ---
+async function pushSettingsToCloud() {
+  const scriptUrl = document.getElementById('set-url').value;
+  if (!scriptUrl) return; 
+  
+  const extraDebtInput = document.getElementById('debt-extra-payment');
+  if (extraDebtInput) {
+    userSettings.debtExtraPayment = parseFloat(extraDebtInput.value) || 0;
+  }
+
+  // Clone settings and remove the name so it stays local-only
+  const cloudSettings = { ...userSettings };
+  delete cloudSettings.name;
+
+  try {
+    await fetch(scriptUrl, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'syncSettings',
+        settings: cloudSettings
+      })
+    });
+  } catch(e) {
+    console.error("Failed to sync settings to cloud.");
+  }
 }
