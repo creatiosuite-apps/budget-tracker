@@ -3527,28 +3527,29 @@ async function syncFromCloud() {
   if (btn) btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
   
   try {
-    // FORCE FRESH DATA: Attach a timestamp so the browser never caches the request
     const cacheBusterUrl = scriptUrl + (scriptUrl.includes('?') ? '&' : '?') + 't=' + new Date().getTime();
-    
-    // Add 'cache: no-store' for extra browser override protection
     const response = await fetch(cacheBusterUrl, { cache: 'no-store' });
     const data = await response.json();
     
-    // Overwrite local memory with fresh cloud data
     if (data.transactions && data.transactions.length > 0) {
       localStorage.setItem('budget_app_transactions', JSON.stringify(data.transactions));
     }
     
-    if (data.budgets && data.budgets.length > 0) {
-      localStorage.setItem('budget_app_budgets', JSON.stringify(data.budgets));
-    }
-    
-    // Overwrite local settings with fresh cloud settings, but protect the local name
     if (data.settings) {
       const localMemory = JSON.parse(localStorage.getItem('budgetSettings')) || {};
       const protectedName = localMemory.name || ''; 
       
       const mergedSettings = { ...data.settings, name: protectedName };
+      
+      // NEW: Wipe stale JSON budgets and rebuild them strictly from the Budgets tab data
+      mergedSettings.budgets = {}; 
+      if (data.budgets && data.budgets.length > 0) {
+        data.budgets.forEach(b => {
+          if (!mergedSettings.budgets[b.Month]) mergedSettings.budgets[b.Month] = {};
+          mergedSettings.budgets[b.Month][b.Category] = b.Limit;
+        });
+      }
+      
       localStorage.setItem('budgetSettings', JSON.stringify(mergedSettings));
     }
     
@@ -3574,6 +3575,7 @@ async function pushSettingsToCloud() {
   // Clone settings and remove the name so it stays local-only
   const cloudSettings = { ...userSettings };
   delete cloudSettings.name;
+  delete cloudSettings.budgets;
 
   try {
     await fetch(scriptUrl, {
