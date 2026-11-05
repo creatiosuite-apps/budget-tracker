@@ -640,3 +640,11 @@ select, input, option {
 .mobile-spacer {
     display: none !important;
 }
+
+input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0;
+}
